@@ -87,7 +87,7 @@ stages:
     - task: AzureWebApp@1
       displayName: 'Deploy Azure Web App : '
       inputs:
-        azureSubscription: 'Compute - Test - Master'
+        azureSubscription: 'Compute-Test-Master'
         appName: $(webAppName)
         appType: webAppLinux
         package: $(projectRoot)/**/*.zip
