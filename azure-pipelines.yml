@@ -6,24 +6,22 @@
 trigger:
 - main
 
+name: $(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(rev:.r)
+
 variables:
   # Azure Resource Manager connection created during pipeline creation
   azureServiceConnectionId: 'c1102cee-7105-4af3-a38d-eca8943e1bea'
-
   # Web app name
   webAppName: 'dm-py-app'
-
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
-
   # Environment name
-  environmentName: ''
-
+  #environmentName: ''
   # Project root folder. Point to the folder containing manage.py file.
   projectRoot: $(System.DefaultWorkingDirectory)
-
   # Python version: 3.7
   pythonVersion: '3.7'
+  artifactname: $(Build.BuildId)
 
 stages:
 - stage: Build
@@ -53,12 +51,17 @@ stages:
         rootFolderOrFile: '$(projectRoot)'
         includeRootFolder: false
         archiveType: zip
-        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+        archiveFile: $(projectRoot)/$(Build.BuildId).zip
         replaceExistingArchive: true
+        verbose: true
 
-    - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-      displayName: 'Upload package'
-      artifact: drop
+    #- upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+    #  displayName: 'Upload package'
+    #  artifact: drop
+    - task: PublishArtifacts@1
+      inputs:
+        pathToPublish: $(projectRoot)/$(Build.BuildId).zip
+        artifactName: $(artifactname)
 
 - stage: Deploy
   displayName: 'Deploy Web App'
@@ -68,7 +71,7 @@ stages:
   - deployment: DeploymentJob
     pool:
       vmImage: $(vmImageName)
-    environment: $(environmentName)
+    #environment: $(environmentName)
     strategy:
       runOnce:
         deploy:
@@ -79,10 +82,15 @@ stages:
               versionSpec: '$(pythonVersion)'
             displayName: 'Use Python version'
 
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              artifactName: $(artifactname)
+              downloadPath: $(projectRoot)
+
           - task: AzureWebApp@1
             displayName: 'Deploy Azure Web App : '
             inputs:
               azureSubscription: $(azureServiceConnectionId)
               appName: $(webAppName)
               appType: webAppLinux
-              package: $(System.DefaultWorkingDirectory)/**/*.zip
+              package: $(projectRoot)/**/*.zip
