@@ -58,7 +58,7 @@ stages:
     #- upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
     #  displayName: 'Upload package'
     #  artifact: drop
-    - task: PublishArtifacts@1
+    - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: $(projectRoot)/$(Build.BuildId).zip
         artifactName: $(artifactname)
@@ -68,29 +68,26 @@ stages:
   dependsOn: Build
   condition: succeeded()
   jobs:
-  - deployment: DeploymentJob
+  - job: DeploymentJob
     pool:
       vmImage: $(vmImageName)
     #environment: $(environmentName)
-    strategy:
-      runOnce:
-        deploy:
-          steps:
+  
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+      displayName: 'Use Python version'
 
-          - task: UsePythonVersion@0
-            inputs:
-              versionSpec: '$(pythonVersion)'
-            displayName: 'Use Python version'
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        artifactName: $(artifactname)
+        downloadPath: $(projectRoot)
 
-          - task: DownloadBuildArtifacts@0
-            inputs:
-              artifactName: $(artifactname)
-              downloadPath: $(projectRoot)
-
-          - task: AzureWebApp@1
-            displayName: 'Deploy Azure Web App : '
-            inputs:
-              azureSubscription: $(azureServiceConnectionId)
-              appName: $(webAppName)
-              appType: webAppLinux
-              package: $(projectRoot)/**/*.zip
+    - task: AzureWebApp@1
+      displayName: 'Deploy Azure Web App : '
+      inputs:
+        azureSubscription: $(azureServiceConnectionId)
+        appName: $(webAppName)
+        appType: webAppLinux
+        package: $(projectRoot)/**/*.zip
